@@ -1,0 +1,36 @@
+# Claude Code plugin marketplace
+
+This folder publishes the skills in this repository as a Claude Code plugin marketplace named `elayadesign-ai-design-skills`. Each skill is its own plugin, so you install only what you need.
+
+## Install
+
+Needs Claude Code 2.1.275 or later.
+
+```text
+/plugin marketplace add 23people-io/elayadesign-ai-design-skills
+/plugin install landing-page-design --marketplace 23people-io/elayadesign-ai-design-skills
+/plugin install figma-designer --marketplace 23people-io/elayadesign-ai-design-skills
+```
+
+Or from the UI: run `/plugins`, open **Marketplaces**, choose **+ Add Marketplace**, enter `https://github.com/23people-io/elayadesign-ai-design-skills`, then pick the plugins to install.
+
+Invoke a skill explicitly with `/<plugin>:<skill>`, for example `/landing-page-design:landing-page-design`.
+
+## Updates
+
+Auto-update is off by default for third-party marketplaces. To turn it on, run `/plugins`, open **Marketplaces**, select this marketplace and choose **Enable auto-update**. Otherwise run `/plugin marketplace update` when you want new versions.
+
+## What you install
+
+The plugins serve the copy of `skills/` in this fork, not upstream directly. Upstream changes reach you only after the fork is synced (**Sync fork** on GitHub) and merged, which is the review point.
+
+## Do not install alongside the 23p marketplaces
+
+If you already use `23p-marketing` or the `elayadesign-ai-design-skills` entry from 23people-io/23p-skills, do not install these plugins as well. The same skills would load twice, and each costs about 174 tokens of always-on context.
+
+## Maintaining
+
+- Validate before opening a PR: `python scripts/validate_marketplace.py`. Add `--previous <git-ref>` to check removals against an earlier revision.
+- Plugin names are permanent. To rename or remove a plugin, delete its entry and add `"renames": {"<old>": "<new>"}` (or `null` to remove) so installed copies migrate.
+- A skill folder that should not be published goes in `"excluded": {"<folder>": "<reason>"}`.
+- Check how far the fork is behind upstream: `gh api repos/23people-io/elayadesign-ai-design-skills/compare/main...elayadesign:main --jq '.ahead_by'`.
