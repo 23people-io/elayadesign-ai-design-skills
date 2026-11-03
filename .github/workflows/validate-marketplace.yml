@@ -6,9 +6,20 @@ on:
       - ".claude-plugin/**"
       - "skills/**"
       - "scripts/validate_marketplace.py"
-      - "tests/test_validate_marketplace.py"
+      - "scripts/marketplace-excluded.json"
+      - "scripts/validate_skills.py"
+      - "tests/**"
       - ".github/workflows/validate-marketplace.yml"
-      - "README.md"
+  push:
+    branches: [main]
+    paths:
+      - ".claude-plugin/**"
+      - "skills/**"
+      - "scripts/validate_marketplace.py"
+      - "scripts/marketplace-excluded.json"
+      - "scripts/validate_skills.py"
+      - "tests/**"
+      - ".github/workflows/validate-marketplace.yml"
   workflow_dispatch:
 
 permissions:
@@ -37,7 +48,7 @@ jobs:
       - name: Validate the marketplace
         run: python scripts/validate_marketplace.py
 
-      - name: Validate with Claude Code
+      - name: Validate the schema with Claude Code
         run: |
           npm install --global @anthropic-ai/claude-code@2.1.317
           claude plugin validate .claude-plugin/marketplace.json --strict
