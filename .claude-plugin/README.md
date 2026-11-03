@@ -30,7 +30,7 @@ If you already use `23p-marketing` or the `elayadesign-ai-design-skills` entry f
 
 ## Maintaining
 
-- Validate before opening a PR: `python scripts/validate_marketplace.py`. Add `--previous <git-ref>` to check removals against an earlier revision.
+- Validate before opening a PR: `python scripts/validate_marketplace.py`. In a PR, add `--previous origin/main` to check removals against the base branch (a ref without a catalog is treated as nothing to compare).
 - Plugin names are permanent. To rename or remove a plugin, delete its entry and add `"renames": {"<old>": "<new>"}` (or `null` to remove) so installed copies migrate.
 - Check how far the fork is behind upstream: `gh api repos/23people-io/elayadesign-ai-design-skills/compare/main...elayadesign:main --jq '.ahead_by'`.
 - A skill folder that must not be published (a draft, or one bundled into another plugin) goes in `scripts/marketplace-excluded.json` as `{"<folder>": "<reason>"}`. It lives outside the catalog because `claude plugin validate --strict` rejects unknown root fields.

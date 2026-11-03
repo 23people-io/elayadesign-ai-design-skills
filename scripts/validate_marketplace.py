@@ -232,6 +232,15 @@ def validate_marketplace(root, previous=None):
     return findings, len(plugins)
 
 
+def ref_exists(root, ref):
+    result = subprocess.run(
+        ["git", "-C", str(root), "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    return result.returncode == 0
+
+
 def load_previous(root, ref):
     result = subprocess.run(
         ["git", "-C", str(root), "show", f"{ref}:{CATALOG_PATH.as_posix()}"],
@@ -240,6 +249,8 @@ def load_previous(root, ref):
         encoding="utf-8",
     )
     if result.returncode:
+        if ref_exists(root, ref):
+            return None, None
         return None, result.stderr.strip()
     try:
         return json.loads(result.stdout), None
@@ -259,6 +270,8 @@ def main(argv):
         previous, error = load_previous(args.root, args.previous)
         if error:
             findings.append(Finding(CATALOG_FILE, None, f"cannot read {args.previous}: {error}"))
+        elif previous is None:
+            print(f"{args.previous} has no catalog, nothing to compare")
     validation, count = validate_marketplace(args.root, previous)
     findings += validation
 

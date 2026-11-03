@@ -475,13 +475,24 @@ class CliTest(MarketplaceTestCase):
         self.assertEqual(code, 1)
         self.assertIn("cannot read HEAD:", out)
 
-    def test_previous_ref_without_catalog_is_an_error(self):
+    def test_previous_ref_without_catalog_is_a_bootstrap(self):
         self.build("alpha")
         self.git("init", "-q")
         self.git("commit", "-q", "--allow-empty", "-m", "empty")
         code, out = self.run_main("--previous", "HEAD")
+        self.assertEqual(code, 0)
+        self.assertEqual(
+            out,
+            "HEAD has no catalog, nothing to compare\nChecked 1 plugin(s), 0 problem(s).\n",
+        )
+
+    def test_bootstrap_still_reports_current_problems(self):
+        self.build("alpha", surprise=1)
+        self.git("init", "-q")
+        self.git("commit", "-q", "--allow-empty", "-m", "empty")
+        code, out = self.run_main("--previous", "HEAD")
         self.assertEqual(code, 1)
-        self.assertIn("cannot read HEAD:", out)
+        self.assertIn("unknown root field 'surprise'", out)
 
 
 if __name__ == "__main__":
