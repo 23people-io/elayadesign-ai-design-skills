@@ -1,5 +1,3 @@
-"""Tests for scripts/validate_marketplace.py. Run with: python -m unittest discover tests"""
-
 import copy
 import io
 import json

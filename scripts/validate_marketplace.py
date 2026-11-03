@@ -1,19 +1,4 @@
 #!/usr/bin/env python3
-"""Validate .claude-plugin/marketplace.json against the skills in this repo.
-
-Offline and deterministic: the catalog is checked against the local skills/
-folders, never against the network. `claude plugin validate --strict` only
-checks the schema, so the rules below are what keep entries and skills in step.
-
-Usage:
-    python scripts/validate_marketplace.py [--root DIR] [--previous GIT_REF]
-
-With --previous, every plugin present in GIT_REF's catalog and absent now must
-be listed in 'renames', so installed copies are migrated instead of orphaned.
-
-Exits with status 1 if any problem is found, 0 otherwise.
-"""
-
 import argparse
 import json
 import subprocess
@@ -145,7 +130,6 @@ def check_entry(root, plugin):
 
 
 def check_plugins(root, plugins):
-    """Return (findings, names) for every entry of the plugins list."""
     findings = []
     names = []
     for index, plugin in enumerate(plugins):
@@ -209,7 +193,6 @@ def check_removed(previous, names, renames):
 
 
 def read_catalog(root):
-    """Return (document, finding). Exactly one of them is None."""
     path = root / CATALOG_PATH
     if not path.is_file():
         return None, Finding(CATALOG_FILE, None, "file not found")
@@ -223,10 +206,6 @@ def read_catalog(root):
 
 
 def validate_marketplace(root, previous=None):
-    """Return the findings for the catalog under root.
-
-    previous is the parsed catalog of an earlier revision, or None.
-    """
     document, finding = read_catalog(root)
     if finding:
         return [finding]
@@ -246,7 +225,6 @@ def validate_marketplace(root, previous=None):
 
 
 def load_previous(root, ref):
-    """Return (catalog, error) from the catalog committed at ref."""
     result = subprocess.run(
         ["git", "-C", str(root), "show", f"{ref}:{CATALOG_PATH.as_posix()}"],
         stdout=subprocess.PIPE,
@@ -262,7 +240,7 @@ def load_previous(root, ref):
 
 
 def main(argv):
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description="Validate the marketplace catalog against the skills folders.")
     parser.add_argument("--root", type=Path, default=Path("."))
     parser.add_argument("--previous", metavar="GIT_REF")
     args = parser.parse_args(argv[1:])
