@@ -108,8 +108,8 @@ def check_fields(plugin):
     findings += check_text_limits(plugin)
     if "version" in plugin:
         findings.append("'version' is not allowed")
-    if "strict" in plugin and not isinstance(plugin["strict"], bool):
-        findings.append("'strict' must be true or false")
+    if "strict" in plugin and plugin["strict"] is not False:
+        findings.append("'strict' must be false so the skills paths are validated")
     return findings
 
 

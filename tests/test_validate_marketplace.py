@@ -198,9 +198,9 @@ class EntryTest(MarketplaceTestCase):
             self.messages(), [f"{CATALOG}:alpha: 'version' is not allowed"]
         )
 
-    def test_strict_must_be_boolean(self):
+    def test_strict_must_be_false(self):
         self.build_with(strict="no")
-        self.assertMessage("'strict' must be true or false")
+        self.assertMessage("'strict' must be false")
 
     def test_source_must_be_local_path(self):
         self.build_with(source="https://example.test/repo.git")
@@ -244,9 +244,12 @@ class SkillsTest(MarketplaceTestCase):
         self.build_with(skills=[3])
         self.assertMessage("'skills' must be a non-empty list")
 
-    def test_strict_true_skips_skills_checks(self):
-        self.build_with(strict=True, skills=[])
-        self.assertClean()
+    def test_strict_true_is_rejected(self):
+        self.build_with(strict=True)
+        self.assertEqual(
+            self.messages(),
+            [f"{CATALOG}:alpha: 'strict' must be false so the skills paths are validated"],
+        )
 
     def test_missing_skill_path(self):
         self.build_with(skills=["./nowhere"])
