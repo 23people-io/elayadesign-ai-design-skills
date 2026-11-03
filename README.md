@@ -86,6 +86,8 @@ Codex, Windsurf, other: copy the skill's `SKILL.md` into your tool's rules file.
 Download the skill's `SKILL.md` and upload it to a Project, or attach it to a chat and say *"follow this."*
 </details>
 
+Using Claude Code plugins instead? See [Claude Code marketplace](.claude-plugin/README.md).
+
 ---
 
 ## Make it yours
