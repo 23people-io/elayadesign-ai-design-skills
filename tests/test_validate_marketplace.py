@@ -140,6 +140,13 @@ class DocumentTest(MarketplaceTestCase):
         self.assertClean()
 
 
+class RepositoryTest(unittest.TestCase):
+    def test_committed_catalog_is_valid(self):
+        findings, count = validate_marketplace(Path(__file__).absolute().parent.parent)
+        self.assertEqual([str(f) for f in findings], [])
+        self.assertGreater(count, 0)
+
+
 class StrictSchemaTest(unittest.TestCase):
     def test_accepted_root_fields_are_all_known_to_the_claude_schema(self):
         schema_fields = {
