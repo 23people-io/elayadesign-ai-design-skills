@@ -1,0 +1,30 @@
+{
+  "name": "elayadesign-ai-design-skills",
+  "description": "elayadesign's AI design skills for Claude Code, served from the 23people.io fork's reviewed copy.",
+  "owner": {
+    "name": "23people.io",
+    "url": "https://github.com/23people-io"
+  },
+  "plugins": [
+    {
+      "name": "landing-page-design",
+      "description": "Build high-converting landing pages: intake, page structure, copywriting, SEO, and strict visual rules for type, spacing, radius, color, icons and motion.",
+      "category": "ai-design",
+      "author": { "name": "elayadesign" },
+      "homepage": "https://github.com/elayadesign/ai-design-skills",
+      "source": "./skills/landing-page-design",
+      "strict": false,
+      "skills": ["./"]
+    },
+    {
+      "name": "figma-designer",
+      "description": "Design in Figma through the Figma MCP with real variables, text styles, auto layout and components on a fixed visual system.",
+      "category": "ai-design",
+      "author": { "name": "elayadesign" },
+      "homepage": "https://github.com/elayadesign/ai-design-skills",
+      "source": "./skills/figma-designer",
+      "strict": false,
+      "skills": ["./"]
+    }
+  ]
+}
