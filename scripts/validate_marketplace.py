@@ -10,6 +10,8 @@ from validate_skills import NAME_PATTERN, validate_skill
 
 CATALOG_PATH = Path(".claude-plugin/marketplace.json")
 CATALOG_FILE = str(CATALOG_PATH)
+EXCLUDED_PATH = Path("scripts/marketplace-excluded.json")
+EXCLUDED_FILE = str(EXCLUDED_PATH)
 DESCRIPTION_MAX = 200
 ROOT_FIELDS = {
     "$schema",
@@ -19,7 +21,6 @@ ROOT_FIELDS = {
     "plugins",
     "renames",
     "forceRemoveDeletedPlugins",
-    "excluded",
 }
 ENTRY_TEXT_FIELDS = ("name", "description", "category")
 
@@ -151,16 +152,23 @@ def check_coverage(root, names, excluded):
         return []
     return [
         Finding(CATALOG_FILE, folder.name,
-                "skill folder is neither a plugin nor in 'excluded'")
+                f"skill folder is neither a plugin nor in {EXCLUDED_FILE}")
         for folder in sorted(skills_dir.iterdir())
         if folder.is_dir() and folder.name not in names and folder.name not in excluded
     ]
 
 
-def check_excluded(excluded):
+def read_excluded(root):
+    path = root / EXCLUDED_PATH
+    if not path.is_file():
+        return {}, []
+    try:
+        excluded = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        return {}, [Finding(EXCLUDED_FILE, None, f"not valid JSON: {exc}")]
     if not isinstance(excluded, dict) or not all(is_text(v) for v in excluded.values()):
-        return ["'excluded' must map each skill folder to a reason"]
-    return []
+        return {}, [Finding(EXCLUDED_FILE, None, "must map each skill folder to a reason")]
+    return excluded, []
 
 
 def check_renames(renames, names):
@@ -213,12 +221,12 @@ def validate_marketplace(root, previous=None):
     findings = [Finding(CATALOG_FILE, None, m) for m in check_root(document)]
     plugins = document["plugins"] if isinstance(document.get("plugins"), list) else []
     plugin_findings, names = check_plugins(root, plugins)
-    excluded = document.get("excluded", {})
+    excluded, excluded_findings = read_excluded(root)
     renames = document.get("renames", {})
     findings += plugin_findings
-    findings += [Finding(CATALOG_FILE, None, m) for m in check_excluded(excluded)]
+    findings += excluded_findings
     findings += [Finding(CATALOG_FILE, None, m) for m in check_renames(renames, names)]
-    findings += check_coverage(root, names, excluded if isinstance(excluded, dict) else {})
+    findings += check_coverage(root, names, excluded)
     if previous is not None:
         findings += check_removed(previous, names, renames)
     return findings

@@ -10,9 +10,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).absolute().parent.parent / "scripts"))
 
-from validate_marketplace import Finding, main, validate_marketplace  # noqa: E402
+from validate_marketplace import ROOT_FIELDS, Finding, main, validate_marketplace  # noqa: E402
 
 CATALOG = ".claude-plugin/marketplace.json"
+EXCLUDED = "scripts/marketplace-excluded.json"
 
 
 def skill_text(name, description="Does a thing. Use when asked."):
@@ -59,6 +60,9 @@ class MarketplaceTestCase(unittest.TestCase):
 
     def write_catalog(self, document):
         self.write(CATALOG, json.dumps(document))
+
+    def exclude(self, **reasons):
+        self.write(EXCLUDED, json.dumps(reasons))
 
     def build(self, *names, **extra):
         for name in names:
@@ -131,10 +135,23 @@ class DocumentTest(MarketplaceTestCase):
             "alpha",
             renames={},
             forceRemoveDeletedPlugins=True,
-            excluded={},
             **{"$schema": "https://example.test/schema.json"},
         )
         self.assertClean()
+
+
+class StrictSchemaTest(unittest.TestCase):
+    def test_accepted_root_fields_are_all_known_to_the_claude_schema(self):
+        schema_fields = {
+            "$schema",
+            "name",
+            "description",
+            "owner",
+            "plugins",
+            "renames",
+            "forceRemoveDeletedPlugins",
+        }
+        self.assertEqual(ROOT_FIELDS, schema_fields)
 
 
 class EntryTest(MarketplaceTestCase):
@@ -272,9 +289,9 @@ class SkillsTest(MarketplaceTestCase):
         self.write_catalog(
             catalog(
                 entry("alpha", source="./", skills=["./skills/alpha", "./skills/beta"]),
-                excluded={"beta": "bundled with alpha"},
             )
         )
+        self.exclude(beta="bundled with alpha")
         self.assertClean()
 
 
@@ -284,19 +301,31 @@ class CoverageTest(MarketplaceTestCase):
         self.add_skill("gamma")
         self.assertEqual(
             self.messages(),
-            [f"{CATALOG}:gamma: skill folder is neither a plugin nor in 'excluded'"],
+            [f"{CATALOG}:gamma: skill folder is neither a plugin nor in {EXCLUDED}"],
         )
 
     def test_excluded_skill_folder_is_allowed(self):
-        self.build("alpha", excluded={"gamma": "draft"})
+        self.build("alpha")
         self.add_skill("gamma")
+        self.exclude(gamma="draft")
         self.assertClean()
 
-    def test_excluded_must_be_object_of_reasons(self):
-        self.build("alpha", excluded=["gamma"])
-        self.assertMessage("'excluded' must map each skill folder to a reason")
-        self.build("alpha", excluded={"gamma": ""})
-        self.assertMessage("'excluded' must map each skill folder to a reason")
+    def test_excluded_file_must_map_folders_to_reasons(self):
+        self.build("alpha")
+        for text in ('["gamma"]', '{"gamma": ""}', '{"gamma": 3}'):
+            self.write(EXCLUDED, text)
+            self.assertEqual(
+                self.messages(), [f"{EXCLUDED}: must map each skill folder to a reason"]
+            )
+
+    def test_excluded_file_must_be_json(self):
+        self.build("alpha")
+        self.write(EXCLUDED, "{bad")
+        self.assertMessage(f"{EXCLUDED}: not valid JSON")
+
+    def test_excluded_is_not_a_catalog_field(self):
+        self.build("alpha", excluded={"gamma": "draft"})
+        self.assertMessage("unknown root field 'excluded'")
 
     def test_files_in_skills_dir_are_ignored(self):
         self.build("alpha")
