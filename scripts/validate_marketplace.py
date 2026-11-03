@@ -114,11 +114,8 @@ def check_text_limits(plugin):
 
 
 def check_fields(plugin):
-    findings = [
-        f"'{field}' is required"
-        for field in ENTRY_TEXT_FIELDS
-        if not is_text(plugin.get(field))
-    ]
+    missing = [f for f in ENTRY_TEXT_FIELDS if not is_text(plugin.get(f))]
+    findings = [f"'{field}' is required" for field in missing]
     findings += [
         f"'{field}' is required" for field in ("source", "strict") if field not in plugin
     ]
@@ -252,10 +249,11 @@ def load_previous(root, ref):
     """Return (catalog, error) from the catalog committed at ref."""
     result = subprocess.run(
         ["git", "-C", str(root), "show", f"{ref}:{CATALOG_PATH.as_posix()}"],
-        capture_output=True,
-        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        encoding="utf-8",
     )
-    if result.returncode != 0:
+    if result.returncode:
         return None, result.stderr.strip()
     try:
         return json.loads(result.stdout), None
@@ -264,7 +262,7 @@ def load_previous(root, ref):
 
 
 def main(argv):
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path("."))
     parser.add_argument("--previous", metavar="GIT_REF")
     args = parser.parse_args(argv[1:])

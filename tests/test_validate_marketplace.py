@@ -10,7 +10,7 @@ import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+sys.path.insert(0, str(Path(__file__).absolute().parent.parent / "scripts"))
 
 from validate_marketplace import Finding, main, validate_marketplace  # noqa: E402
 
@@ -406,6 +406,12 @@ class CliTest(MarketplaceTestCase):
         self.assertEqual(
             out, f"{CATALOG}: file not found\nChecked 0 plugin(s), 1 problem(s).\n"
         )
+
+    def test_plugin_count_is_zero_when_plugins_is_not_a_list(self):
+        self.write_catalog(catalog(plugins={"alpha": 1}))
+        code, out = self.run_main()
+        self.assertEqual(code, 1)
+        self.assertTrue(out.endswith("Checked 0 plugin(s), 1 problem(s).\n"))
 
     def test_previous_ref_detects_removal(self):
         self.build("alpha", "beta")
