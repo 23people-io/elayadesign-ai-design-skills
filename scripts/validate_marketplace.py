@@ -100,6 +100,19 @@ def check_skill_paths(root, plugin):
     return findings
 
 
+def check_text_limits(plugin):
+    name = plugin.get("name")
+    description = plugin.get("description")
+    findings = []
+    if is_text(name) and not is_slug(name):
+        findings.append(f"'name' is '{name}', use a lowercase slug with single hyphens")
+    if is_text(description) and len(description) > DESCRIPTION_MAX:
+        findings.append(
+            f"'description' is {len(description)} characters, the limit is {DESCRIPTION_MAX}"
+        )
+    return findings
+
+
 def check_fields(plugin):
     findings = [
         f"'{field}' is required"
@@ -109,14 +122,7 @@ def check_fields(plugin):
     findings += [
         f"'{field}' is required" for field in ("source", "strict") if field not in plugin
     ]
-    name = plugin.get("name")
-    if is_text(name) and not is_slug(name):
-        findings.append(f"'name' is '{name}', use a lowercase slug with single hyphens")
-    description = plugin.get("description")
-    if is_text(description) and len(description) > DESCRIPTION_MAX:
-        findings.append(
-            f"'description' is {len(description)} characters, the limit is {DESCRIPTION_MAX}"
-        )
+    findings += check_text_limits(plugin)
     if "version" in plugin:
         findings.append("'version' is not allowed")
     if "strict" in plugin and not isinstance(plugin["strict"], bool):
