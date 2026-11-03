@@ -70,7 +70,7 @@ class MarketplaceTestCase(unittest.TestCase):
         self.write_catalog(catalog(*(entry(n) for n in names), **extra))
 
     def messages(self, previous=None):
-        return [str(f) for f in validate_marketplace(self.root, previous)]
+        return [str(f) for f in validate_marketplace(self.root, previous)[0]]
 
     def assertMessage(self, fragment, previous=None):
         found = self.messages(previous)

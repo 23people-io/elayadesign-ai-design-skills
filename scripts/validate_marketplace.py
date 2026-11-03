@@ -216,7 +216,7 @@ def read_catalog(root):
 def validate_marketplace(root, previous=None):
     document, finding = read_catalog(root)
     if finding:
-        return [finding]
+        return [finding], 0
 
     findings = [Finding(CATALOG_FILE, None, m) for m in check_root(document)]
     plugins = document["plugins"] if isinstance(document.get("plugins"), list) else []
@@ -229,7 +229,7 @@ def validate_marketplace(root, previous=None):
     findings += check_coverage(root, names, excluded)
     if previous is not None:
         findings += check_removed(previous, names, renames)
-    return findings
+    return findings, len(plugins)
 
 
 def load_previous(root, ref):
@@ -259,20 +259,13 @@ def main(argv):
         previous, error = load_previous(args.root, args.previous)
         if error:
             findings.append(Finding(CATALOG_FILE, None, f"cannot read {args.previous}: {error}"))
-    findings += validate_marketplace(args.root, previous)
+    validation, count = validate_marketplace(args.root, previous)
+    findings += validation
 
     for finding in findings:
         print(finding)
-    print(f"Checked {count_plugins(args.root)} plugin(s), {len(findings)} problem(s).")
+    print(f"Checked {count} plugin(s), {len(findings)} problem(s).")
     return 1 if findings else 0
-
-
-def count_plugins(root):
-    try:
-        plugins = json.loads((root / CATALOG_PATH).read_text(encoding="utf-8"))["plugins"]
-    except (OSError, ValueError, KeyError, TypeError):
-        return 0
-    return len(plugins) if isinstance(plugins, list) else 0
 
 
 if __name__ == "__main__":
