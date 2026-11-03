@@ -24,6 +24,7 @@ from typing import NamedTuple, Optional
 from validate_skills import NAME_PATTERN, validate_skill
 
 CATALOG_PATH = Path(".claude-plugin/marketplace.json")
+CATALOG_FILE = str(CATALOG_PATH)
 DESCRIPTION_MAX = 200
 ROOT_FIELDS = {
     "$schema",
@@ -99,14 +100,15 @@ def check_skill_paths(root, plugin):
     return findings
 
 
-def check_entry(root, plugin):
-    findings = []
-    for field in ENTRY_TEXT_FIELDS:
-        if not is_text(plugin.get(field)):
-            findings.append(f"'{field}' is required")
-    for field in ("source", "strict"):
-        if field not in plugin:
-            findings.append(f"'{field}' is required")
+def check_fields(plugin):
+    findings = [
+        f"'{field}' is required"
+        for field in ENTRY_TEXT_FIELDS
+        if not is_text(plugin.get(field))
+    ]
+    findings += [
+        f"'{field}' is required" for field in ("source", "strict") if field not in plugin
+    ]
     name = plugin.get("name")
     if is_text(name) and not is_slug(name):
         findings.append(f"'name' is '{name}', use a lowercase slug with single hyphens")
@@ -119,16 +121,41 @@ def check_entry(root, plugin):
         findings.append("'version' is not allowed")
     if "strict" in plugin and not isinstance(plugin["strict"], bool):
         findings.append("'strict' must be true or false")
-
-    source = plugin.get("source")
-    if "source" in plugin:
-        if not (isinstance(source, str) and source.startswith("./")):
-            findings.append("'source' must be a local path starting with './'")
-        elif not inside(root, root / source):
-            findings.append("'source' points outside the repository")
-        elif plugin.get("strict") is False and is_text(name):
-            findings += check_skill_paths(root, plugin)
     return findings
+
+
+def check_source(root, plugin):
+    if "source" not in plugin:
+        return []
+    source = plugin["source"]
+    if not (isinstance(source, str) and source.startswith("./")):
+        return ["'source' must be a local path starting with './'"]
+    if not inside(root, root / source):
+        return ["'source' points outside the repository"]
+    if plugin.get("strict") is False and is_text(plugin.get("name")):
+        return check_skill_paths(root, plugin)
+    return []
+
+
+def check_entry(root, plugin):
+    return check_fields(plugin) + check_source(root, plugin)
+
+
+def check_plugins(root, plugins):
+    """Return (findings, names) for every entry of the plugins list."""
+    findings = []
+    names = []
+    for index, plugin in enumerate(plugins):
+        named = isinstance(plugin, dict) and is_text(plugin.get("name"))
+        label = plugin["name"] if named else f"plugins[{index}]"
+        if not isinstance(plugin, dict):
+            findings.append(Finding(CATALOG_FILE, label, "entry must be an object"))
+            continue
+        if label in names:
+            findings.append(Finding(CATALOG_FILE, label, f"duplicate plugin name '{label}'"))
+        names.append(label)
+        findings += [Finding(CATALOG_FILE, label, m) for m in check_entry(root, plugin)]
+    return findings, names
 
 
 def check_coverage(root, names, excluded):
@@ -136,7 +163,7 @@ def check_coverage(root, names, excluded):
     if not skills_dir.is_dir():
         return []
     return [
-        Finding(str(CATALOG_PATH), folder.name,
+        Finding(CATALOG_FILE, folder.name,
                 "skill folder is neither a plugin nor in 'excluded'")
         for folder in sorted(skills_dir.iterdir())
         if folder.is_dir() and folder.name not in names and folder.name not in excluded
@@ -170,46 +197,48 @@ def previous_names(previous):
     return [p["name"] for p in plugins if isinstance(p, dict) and isinstance(p.get("name"), str)]
 
 
+def check_removed(previous, names, renames):
+    return [
+        Finding(CATALOG_FILE, old, "removed without an entry in 'renames'")
+        for old in previous_names(previous)
+        if old not in names and not (isinstance(renames, dict) and old in renames)
+    ]
+
+
+def read_catalog(root):
+    """Return (document, finding). Exactly one of them is None."""
+    path = root / CATALOG_PATH
+    if not path.is_file():
+        return None, Finding(CATALOG_FILE, None, "file not found")
+    try:
+        document = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        return None, Finding(CATALOG_FILE, None, f"not valid JSON: {exc}")
+    if not isinstance(document, dict):
+        return None, Finding(CATALOG_FILE, None, "root must be an object")
+    return document, None
+
+
 def validate_marketplace(root, previous=None):
     """Return the findings for the catalog under root.
 
     previous is the parsed catalog of an earlier revision, or None.
     """
-    file = str(CATALOG_PATH)
-    path = root / CATALOG_PATH
-    if not path.is_file():
-        return [Finding(file, None, "file not found")]
-    try:
-        document = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
-        return [Finding(file, None, f"not valid JSON: {exc}")]
-    if not isinstance(document, dict):
-        return [Finding(file, None, "root must be an object")]
+    document, finding = read_catalog(root)
+    if finding:
+        return [finding]
 
-    findings = [Finding(file, None, m) for m in check_root(document)]
+    findings = [Finding(CATALOG_FILE, None, m) for m in check_root(document)]
     plugins = document["plugins"] if isinstance(document.get("plugins"), list) else []
-    names = []
-    for index, plugin in enumerate(plugins):
-        label = plugin.get("name") if isinstance(plugin, dict) and is_text(plugin.get("name")) else f"plugins[{index}]"
-        if not isinstance(plugin, dict):
-            findings.append(Finding(file, label, "entry must be an object"))
-            continue
-        if label in names:
-            findings.append(Finding(file, label, f"duplicate plugin name '{label}'"))
-        names.append(label)
-        findings += [Finding(file, label, m) for m in check_entry(root, plugin)]
-
+    plugin_findings, names = check_plugins(root, plugins)
     excluded = document.get("excluded", {})
-    findings += [Finding(file, None, m) for m in check_excluded(excluded)]
     renames = document.get("renames", {})
-    findings += [Finding(file, None, m) for m in check_renames(renames, names)]
+    findings += plugin_findings
+    findings += [Finding(CATALOG_FILE, None, m) for m in check_excluded(excluded)]
+    findings += [Finding(CATALOG_FILE, None, m) for m in check_renames(renames, names)]
     findings += check_coverage(root, names, excluded if isinstance(excluded, dict) else {})
     if previous is not None:
-        findings += [
-            Finding(file, old, "removed without an entry in 'renames'")
-            for old in previous_names(previous)
-            if old not in names and not (isinstance(renames, dict) and old in renames)
-        ]
+        findings += check_removed(previous, names, renames)
     return findings
 
 
@@ -239,7 +268,7 @@ def main(argv):
     if args.previous:
         previous, error = load_previous(args.root, args.previous)
         if error:
-            findings.append(Finding(str(CATALOG_PATH), None, f"cannot read {args.previous}: {error}"))
+            findings.append(Finding(CATALOG_FILE, None, f"cannot read {args.previous}: {error}"))
     findings += validate_marketplace(args.root, previous)
 
     for finding in findings:
