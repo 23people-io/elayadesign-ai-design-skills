@@ -1,6 +1,6 @@
 # Claude Code plugin marketplace
 
-This folder publishes the skills in this repository as a Claude Code plugin marketplace named `elayadesign-ai-design-skills`. Each skill is its own plugin, so you install only what you need.
+This folder publishes the skills in this repository as a Claude Code plugin marketplace named `elayadesign-ai-design-skills`. Each skill is its own plugin, so you install only what you need. The repository root is also a single plugin under the same name, declared by `.claude-plugin/plugin.json`, so the 23people catalog can deliver both skills in one install.
 
 ## Install
 
@@ -15,6 +15,12 @@ Needs Claude Code 2.1.275 or later.
 Or from the UI: run `/plugins`, open **Marketplaces**, choose **+ Add Marketplace**, enter `https://github.com/23people-io/elayadesign-ai-design-skills`, then pick the plugins to install.
 
 Invoke a skill explicitly with `/<plugin>:<skill>`, for example `/landing-page-design:landing-page-design`.
+
+From the 23people catalog, the repository root installs as one plugin with both skills:
+
+```text
+/plugin install elayadesign-ai-design-skills --marketplace 23people-io/23p-skills
+```
 
 ## Updates
 
